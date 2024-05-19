@@ -218,10 +218,80 @@ namespace LibraryInterface
             comboColumn2.DisplayMemberPath = "Name";
             firstGrid.Columns.Add(comboColumn2);
 
-            firstGrid.ItemsSource = db.Compositions.ToList();
+            var comboBoxColumn = new DataGridTemplateColumn();
+            comboBoxColumn.Header = "Экземпляры";
+            FrameworkElementFactory comboBoxFactory = new FrameworkElementFactory(typeof(ComboBox));
+            comboBoxFactory.AddHandler(ComboBox.SelectionChangedEvent, new SelectionChangedEventHandler(ComboBox_SelectionChanged));
+            DataTemplate cellTemplate = new DataTemplate();
+            cellTemplate.VisualTree = comboBoxFactory;
+            comboBoxColumn.CellTemplate = cellTemplate;
+            firstGrid.Columns.Add(comboBoxColumn);
+
+            var compositions = db.Compositions.Include(e => e.Examplers).ToList();
+            firstGrid.ItemsSource = compositions;
+
+           
+            for (int i = 0; i < compositions.Count; i++)
+            {
+                firstGrid.UpdateLayout();
+                firstGrid.ScrollIntoView(firstGrid.Items[i]);
+                DataGridRow dataGridRow = (DataGridRow)firstGrid.ItemContainerGenerator.ContainerFromIndex(i);
+                List<ComboBox> comboBoxes = FindVisualChildren<ComboBox>(dataGridRow);
+                List<ExamplerForComboBox> examplers = new List<ExamplerForComboBox>();
+                List<Exampler> examplersbd = compositions[i].Examplers;
+                for (int j = 0; j< examplersbd.Count; j++)
+                {
+                    examplers.Add(new ExamplerForComboBox(examplersbd[j]));
+                }
+                comboBoxes[1].ItemsSource = examplers;
+                comboBoxes[1].DisplayMemberPath = "Id";
+            }
+
+
+
             firstGrid.Visibility = Visibility.Visible;
 
         }
+
+
+        private void ComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ComboBox comboBox = sender as ComboBox;
+
+            // Получение выбранного элемента
+            object selectedValue = comboBox.SelectedItem;
+
+            string text = ((ExamplerForComboBox)selectedValue).FullInfo;
+            MessageBox.Show(text);
+        }
+
+
+        private List<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
+        {
+            List<T> foundChildren = new List<T>();
+
+            int count = VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < count; i++)
+            {
+                DependencyObject child = VisualTreeHelper.GetChild(parent, i);
+                if (child != null && child is T)
+                {
+                    foundChildren.Add((T)child);
+                }
+                else
+                {
+                    List<T> childrenOfChild = FindVisualChildren<T>(child);
+                    if (childrenOfChild != null)
+                    {
+                        foundChildren.AddRange(childrenOfChild);
+                    }
+                }
+            }
+
+            return foundChildren;
+        }
+
+
         private void CompositionsAndPublishers_Click(object sender, RoutedEventArgs e)
         {
             firstGrid.Visibility = Visibility.Hidden;
@@ -1257,6 +1327,13 @@ namespace LibraryInterface
         {
             MessageBox.Show("Добро пожаловать в информационную систему бибилиотеки ВУЗА. После того как вы зашли в систему под вашим логином и паролем, вы можете выбрать один из пунктов меню, которые находятся выше. Далее у вас появится таблица с данными, чтобы редактировать или добавлять данные нужно нажать кнопку \"Редактировать\", после завершения редактирования нажмите кнопку \"Завершить редактирование\" и \"Сохранить\". После этого все внесенные изменения сохраняться.");
         }
+
+        private void UserHelp_Click(object sender, RoutedEventArgs e)
+        {
+            MessageBox.Show("Редактирование таблицы:\r\n1. Внесение новой записи, например: добавлять данные о новом студенте в таблицу студентов\r\n2. Редактирование записи, например: изменение фамилии или должности профессора в таблице\r\n3. Удаление записи, например: удалить запись из таблицы\r\nАвторизация:\r\n1. Авторизация пользователя путём ввода логина и пароля, по логину определяется роль пользователя в системе\r\n2. Смена пароля: позволяет сменить пароль пользователя. Для этого нужно внести используемый пароль на данный момент и подтвердить новый\r\n");
+        }
+
+
     }
 }
 
