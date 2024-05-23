@@ -315,56 +315,56 @@ namespace LibraryInterface
             firstGrid.Columns.Add(comboColumn2);
 
             DataGridComboBoxColumn comboColumn3 = new DataGridComboBoxColumn();
-            comboColumn3.Header = "Место публикации";
+            comboColumn3.Header = "Издательство";
             comboColumn3.ItemsSource = db.PlacesOfPublications.ToList();
             comboColumn3.SelectedValueBinding = new Binding("PlaceOfPublicationId");
             comboColumn3.SelectedValuePath = "Id";
             comboColumn3.DisplayMemberPath = "Name";
             firstGrid.Columns.Add(comboColumn3);
 
-            DataGridComboBoxColumn comboColumn4 = new DataGridComboBoxColumn();
-            comboColumn4.Header = "Издательство";
-            comboColumn4.ItemsSource = db.PublishingHouses.ToList();
-            comboColumn4.SelectedValueBinding = new Binding("PublishingHouseId");
-            comboColumn4.SelectedValuePath = "Id";
-            comboColumn4.DisplayMemberPath = "Name";
-            firstGrid.Columns.Add(comboColumn4);
+            //DataGridComboBoxColumn comboColumn4 = new DataGridComboBoxColumn();
+            //comboColumn4.Header = "Издательство";
+            //comboColumn4.ItemsSource = db.PublishingHouses.ToList();
+            //comboColumn4.SelectedValueBinding = new Binding("PublishingHouseId");
+            //comboColumn4.SelectedValuePath = "Id";
+            //comboColumn4.DisplayMemberPath = "Name";
+            //firstGrid.Columns.Add(comboColumn4);
 
             firstGrid.ItemsSource = db.CompositionsAndPublishers.ToList();
             firstGrid.Visibility = Visibility.Visible;
         }
 
-        private void PublishingHouse_Click(object sender, RoutedEventArgs e)
-        {
-            firstGrid.Visibility = Visibility.Hidden;
-            firstGrid.ItemsSource = null;
-            firstGrid.Columns.Clear();
-            if (strangeEvent == true)
-            {
-                firstGrid.RowEditEnding -= FirstGrid_SourceUpdated;
-                strangeEvent = false;
-            }
-            UserInfo info = userInfo.Find(x => x.MenuInfoId == (sender as MyMenuItem)!.Id)!;
-            Granting_Rights(info);
+        //private void PublishingHouse_Click(object sender, RoutedEventArgs e)
+        //{
+        //    firstGrid.Visibility = Visibility.Hidden;
+        //    firstGrid.ItemsSource = null;
+        //    firstGrid.Columns.Clear();
+        //    if (strangeEvent == true)
+        //    {
+        //        firstGrid.RowEditEnding -= FirstGrid_SourceUpdated;
+        //        strangeEvent = false;
+        //    }
+        //    UserInfo info = userInfo.Find(x => x.MenuInfoId == (sender as MyMenuItem)!.Id)!;
+        //    Granting_Rights(info);
 
-            DataGridTextColumn col1 = new DataGridTextColumn();
-            col1.Header = "Название";
-            col1.Binding = new Binding("Name");
-            firstGrid.Columns.Add(col1);
+        //    DataGridTextColumn col1 = new DataGridTextColumn();
+        //    col1.Header = "Название";
+        //    col1.Binding = new Binding("Name");
+        //    firstGrid.Columns.Add(col1);
 
-            DataGridNumericColumn col2 = new DataGridNumericColumn();
-            col2.Header = "Дней выдачи";
-            col2.Binding = new Binding("DaysOfIssuance");
-            firstGrid.Columns.Add(col2);
+        //    DataGridNumericColumn col2 = new DataGridNumericColumn();
+        //    col2.Header = "Дней выдачи";
+        //    col2.Binding = new Binding("DaysOfIssuance");
+        //    firstGrid.Columns.Add(col2);
 
-            DataGridCheckBoxColumn checkboxColumn1 = new DataGridCheckBoxColumn();
-            checkboxColumn1.Header = "Разрешение";
-            checkboxColumn1.Binding = new Binding("PermissionOnIssuance") { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged };
-            firstGrid.Columns.Add(checkboxColumn1);
+        //    DataGridCheckBoxColumn checkboxColumn1 = new DataGridCheckBoxColumn();
+        //    checkboxColumn1.Header = "Разрешение";
+        //    checkboxColumn1.Binding = new Binding("PermissionOnIssuance") { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged };
+        //    firstGrid.Columns.Add(checkboxColumn1);
 
-            firstGrid.ItemsSource = db.PublishingHouses.ToList();
-            firstGrid.Visibility = Visibility.Visible;
-        }
+        //    firstGrid.ItemsSource = db.PublishingHouses.ToList();
+        //    firstGrid.Visibility = Visibility.Visible;
+        //}
         private void Exampler_Click(object sender, RoutedEventArgs e)
         {
             firstGrid.Visibility = Visibility.Hidden;
@@ -391,7 +391,7 @@ namespace LibraryInterface
             comboColumn2.ItemsSource = db.Storages.ToList();
             comboColumn2.SelectedValueBinding = new Binding("StorageId");
             comboColumn2.SelectedValuePath = "Id";
-            comboColumn2.DisplayMemberPath = "Id";
+            comboColumn2.DisplayMemberPath = "Type";
             firstGrid.Columns.Add(comboColumn2);
 
 
@@ -591,13 +591,13 @@ namespace LibraryInterface
             col1.Binding = new Binding("Name");
             firstGrid.Columns.Add(col1);
 
-            //DataGridComboBoxColumn comboColumn2 = new DataGridComboBoxColumn();
-            //comboColumn2.Header = "Издательство";
-            //comboColumn2.ItemsSource = db.PublishingHouses.ToList();
-            //comboColumn2.SelectedValueBinding = new Binding("PublishingHouseId");
-            //comboColumn2.SelectedValuePath = "Id";
-            //comboColumn2.DisplayMemberPath = "Name";
-            //firstGrid.Columns.Add(comboColumn2);
+            DataGridComboBoxColumn comboColumn2 = new DataGridComboBoxColumn();
+            comboColumn2.Header = "Город";
+            comboColumn2.ItemsSource = db.Cities.ToList();
+            comboColumn2.SelectedValueBinding = new Binding("CityId");
+            comboColumn2.SelectedValuePath = "Id";
+            comboColumn2.DisplayMemberPath = "Name";
+            firstGrid.Columns.Add(comboColumn2);
 
             firstGrid.ItemsSource = db.PlacesOfPublications.ToList();
             firstGrid.Visibility = Visibility.Visible;
@@ -952,8 +952,54 @@ namespace LibraryInterface
             col1.Header = "Название";
             col1.Binding = new Binding("Name");
             firstGrid.Columns.Add(col1);
+
+            DataGridNumericColumn col2 = new DataGridNumericColumn();
+            col2.Header = "Дней выдачи";
+            col2.Binding = new Binding("DaysOfIssuance");
+            firstGrid.Columns.Add(col2);
+
+            DataGridCheckBoxColumn checkboxColumn1 = new DataGridCheckBoxColumn();
+            checkboxColumn1.Header = "Разрешение";
+            checkboxColumn1.Binding = new Binding("PermissionOnIssuance") { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged };
+            firstGrid.Columns.Add(checkboxColumn1);
+
+            DataGridComboBoxColumn comboColumn2 = new DataGridComboBoxColumn();
+            comboColumn2.Header = "Хранилище";
+            comboColumn2.ItemsSource = db.Storages.ToList();
+            comboColumn2.SelectedValueBinding = new Binding("StorageId");
+            comboColumn2.SelectedValuePath = "Id";
+            comboColumn2.DisplayMemberPath = "Type";
+            firstGrid.Columns.Add(comboColumn2);
+
             firstGrid.ItemsSource = db.TypesOfComposition.ToList();
             firstGrid.Visibility = Visibility.Visible;
+
+
+        }
+
+        private void City_Click(object sender, RoutedEventArgs e)
+        {
+            firstGrid.Visibility = Visibility.Hidden;
+            firstGrid.ItemsSource = null;
+            firstGrid.Columns.Clear();
+            if (strangeEvent == true)
+            {
+                firstGrid.RowEditEnding -= FirstGrid_SourceUpdated;
+                strangeEvent = false;
+            }
+            UserInfo info = userInfo.Find(x => x.MenuInfoId == (sender as MyMenuItem)!.Id)!;
+            Granting_Rights(info);
+
+
+            DataGridTextColumn col1 = new DataGridTextColumn();
+            col1.Header = "Название";
+            col1.Binding = new Binding("Name");
+            firstGrid.Columns.Add(col1);
+
+            firstGrid.ItemsSource = db.Cities.ToList();
+            firstGrid.Visibility = Visibility.Visible;
+
+
         }
         private void Degrees_Click(object sender, RoutedEventArgs e)
         {

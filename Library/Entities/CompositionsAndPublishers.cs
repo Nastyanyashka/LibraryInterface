@@ -11,10 +11,8 @@ namespace Library.Entities
         int id;
         int compostionId;
         int placeOfPublicationId;
-        int publishingHouseId;
         Composition? composition;
         PlaceOfPublication? placeOfPublication;
-        PublishingHouse? publishingHouse;
         public CompositionsAndPublishers()
         {
 
@@ -22,8 +20,6 @@ namespace Library.Entities
         public int Id { get { return id; }  set { id = value; } }
         public int CompostionId { get {  return compostionId; } set {  compostionId = value; } }
         public int PlaceOfPublicationId { get { return placeOfPublicationId; } set {  placeOfPublicationId = value; } }
-        public int PublishingHouseId { get { return publishingHouseId; } set {  publishingHouseId = value; } }
-        public PublishingHouse? PublishingHouse { get { return publishingHouse; } set { publishingHouse = value; } }
         public Composition? Composition { get { return composition; } set {  composition = value; } }
         public PlaceOfPublication? PlaceOfPublication { get {  return placeOfPublication; } set { placeOfPublication = value; } }
 

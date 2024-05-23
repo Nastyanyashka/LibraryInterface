@@ -3,6 +3,7 @@ using System;
 using Library;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Library.Migrations
 {
     [DbContext(typeof(ApplicationContext))]
-    partial class ApplicationContextModelSnapshot : ModelSnapshot
+    [Migration("20240521094858_para")]
+    partial class para
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "7.0.14");
@@ -345,12 +348,7 @@ namespace Library.Migrations
                     b.Property<bool>("PermissionOnIssuance")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("StorageId")
-                        .HasColumnType("INTEGER");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("StorageId");
 
                     b.ToTable("TypesOfComposition");
                 });
@@ -686,17 +684,6 @@ namespace Library.Migrations
                     b.Navigation("City");
                 });
 
-            modelBuilder.Entity("Library.Entities.TypeOfComposition", b =>
-                {
-                    b.HasOne("Library.Entities.Storage", "Storage")
-                        .WithMany("TypesOfCompositions")
-                        .HasForeignKey("StorageId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Storage");
-                });
-
             modelBuilder.Entity("Library.Entities.TypeOfReader.PropertiesOfTypes.Department", b =>
                 {
                     b.HasOne("Library.Entities.TypeOfReader.PropertiesOfTypes.Faculty", "Faculty")
@@ -862,8 +849,6 @@ namespace Library.Migrations
             modelBuilder.Entity("Library.Entities.Storage", b =>
                 {
                     b.Navigation("Examplers");
-
-                    b.Navigation("TypesOfCompositions");
                 });
 
             modelBuilder.Entity("Library.Entities.TypeOfComposition", b =>

@@ -19,13 +19,13 @@ namespace Library
         public DbSet<Reader> Readers => Set<Reader>();
         public DbSet<Author> Authors => Set<Author>();
 
+        public DbSet<City> Cities => Set<City>();
         public DbSet<Composition> Compositions => Set<Composition>();
         public DbSet<Exampler> Examplers => Set<Exampler>();
         public DbSet<PlaceOfPublication> PlacesOfPublications => Set<PlaceOfPublication>();
         public DbSet<CompositionsAndPublishers> CompositionsAndPublishers => Set<CompositionsAndPublishers>("CompositionsAndPublishers");
         public DbSet<GivenExamplers> GivenExamplers => Set<GivenExamplers>("GivenExamplers");
         public DbSet<InterlibrarySubscription> InterlibrarySubscriptions => Set<InterlibrarySubscription>();
-        public DbSet<PublishingHouse> PublishingHouses => Set<PublishingHouse>();
         public DbSet<ReadersAndPenaltys> ReadersAndPenaltys => Set<ReadersAndPenaltys>("ReadersAndPenaltys");
         public DbSet<AuthorsAndCompositions> AuthorsAndCompositions => Set<AuthorsAndCompositions>("AuthorAndComposition");
         public DbSet<Storage> Storages => Set<Storage>();
@@ -60,9 +60,14 @@ namespace Library
             modelBuilder.Entity<Reader>(ReaderConfigure);
             modelBuilder.Entity<Exampler>(ExamplerConfigure);
             modelBuilder.Entity<Composition>(CompositionConfigure);
-            modelBuilder.Entity<PlaceOfPublication>(PlaceOfPublicationConfigure);
             modelBuilder.Entity<User>(UserConfigure);
+            //modelBuilder.Entity<TypeOfComposition>(TypeConfigure);
         }
+        //public void TypeConfigure(EntityTypeBuilder<TypeOfComposition> builder)
+        //{
+        //    builder.HasOne(c=> c.Storage).WithMany(c=> c.TypesOfCompositions).HasForeignKey(c=>c.StorageId).OnDelete(DeleteBehavior.Cascade);
+        //}
+
         public void ReaderConfigure(EntityTypeBuilder<Reader> builder)
         {
             //builder.HasOne(c => c.Category).WithMany(r => r.Readers).HasForeignKey(c => c.CategoryId);
@@ -114,10 +119,6 @@ namespace Library
                         l => l.HasOne<PlaceOfPublication>(e => e.PlaceOfPublication).WithMany(e => e.CompositionsAndPublishers).HasForeignKey(e => e.PlaceOfPublicationId).HasPrincipalKey(e => e.Id),
                         r => r.HasOne<Composition>(e => e.Composition).WithMany(e => e.CompositionsAndPublishers).HasForeignKey(e => e.CompostionId).HasPrincipalKey(e => e.Id),
                         j => j.HasKey(e => e.Id));
-        }
-        public void PlaceOfPublicationConfigure(EntityTypeBuilder<PlaceOfPublication> builder)
-        {
-            builder.HasOne(s => s.PublishingHouse).WithMany(e => e.PlaceOfPublications).HasForeignKey(s => s.PublishingHouseId);
         }
 
         public void UserConfigure(EntityTypeBuilder<User> builder)
