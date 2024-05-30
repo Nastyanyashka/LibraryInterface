@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.Xml;
@@ -39,7 +40,6 @@ namespace LibraryInterface
         bool antiLoop = false;
         public MainWindow()
         {
-            new Authorization().ShowDialog();
             InitializeComponent();
 
             menuInfos = db.MenuInfo.OrderBy(o => o.ParentId).ToList();
@@ -114,6 +114,26 @@ namespace LibraryInterface
                         {
                             db.UserInfo.Remove((UserInfo)row);
                             //db.SaveChanges();
+                            return;
+                        }
+                        if (row is CompositionsAndPublishers)
+                        {
+                            db.CompositionsAndPublishers.Remove((CompositionsAndPublishers)row);
+                            return;
+                        }
+                        if (row is GivenExamplers)
+                        {
+                            db.GivenExamplers.Remove((GivenExamplers)row);
+                            return;
+                        }
+                        if (row is AuthorsAndCompositions)
+                        {
+                            db.AuthorsAndCompositions.Remove((AuthorsAndCompositions)row);
+                            return;
+                        }
+                        if (row is ReadersAndPenaltys)
+                        {
+                            db.ReadersAndPenaltys.Remove((ReadersAndPenaltys)row);
                             return;
                         }
                         db.Remove(row);
@@ -219,32 +239,39 @@ namespace LibraryInterface
             firstGrid.Columns.Add(comboColumn2);
 
             var comboBoxColumn = new DataGridTemplateColumn();
-            comboBoxColumn.Header = "Экземпляры";
-            FrameworkElementFactory comboBoxFactory = new FrameworkElementFactory(typeof(ComboBox));
-            comboBoxFactory.AddHandler(ComboBox.SelectionChangedEvent, new SelectionChangedEventHandler(ComboBox_SelectionChanged));
+            comboBoxColumn.Header = "Авторы";
+            FrameworkElementFactory comboBoxFactory = new FrameworkElementFactory(typeof(ButttonWInfo));
+            comboBoxFactory.AddHandler(ButttonWInfo.ClickEvent, new RoutedEventHandler(ButtonInfo_Click2));
+            comboBoxFactory.SetValue(ButttonWInfo.ContentProperty, "Открыть");
             DataTemplate cellTemplate = new DataTemplate();
             cellTemplate.VisualTree = comboBoxFactory;
             comboBoxColumn.CellTemplate = cellTemplate;
             firstGrid.Columns.Add(comboBoxColumn);
 
+            var buttonColumn = new DataGridTemplateColumn();
+            buttonColumn.Header = "Экземпляры";
+            FrameworkElementFactory buttonFactory = new FrameworkElementFactory(typeof(ButttonWInfo));
+            buttonFactory.AddHandler(ButttonWInfo.ClickEvent, new RoutedEventHandler(ButtonInfo_Click));
+            buttonFactory.SetValue(ButttonWInfo.ContentProperty, "Открыть");
+            DataTemplate cellTemplate2 = new DataTemplate();
+            cellTemplate2.VisualTree = buttonFactory;
+            buttonColumn.CellTemplate = cellTemplate2;
+            firstGrid.Columns.Add(buttonColumn);
+
             var compositions = db.Compositions.Include(e => e.Examplers).ToList();
             firstGrid.ItemsSource = compositions;
 
-           
+
             for (int i = 0; i < compositions.Count; i++)
             {
                 firstGrid.UpdateLayout();
                 firstGrid.ScrollIntoView(firstGrid.Items[i]);
                 DataGridRow dataGridRow = (DataGridRow)firstGrid.ItemContainerGenerator.ContainerFromIndex(i);
-                List<ComboBox> comboBoxes = FindVisualChildren<ComboBox>(dataGridRow);
-                List<ExamplerForComboBox> examplers = new List<ExamplerForComboBox>();
-                List<Exampler> examplersbd = compositions[i].Examplers;
-                for (int j = 0; j< examplersbd.Count; j++)
+                List<ButttonWInfo> comboBoxes = FindVisualChildren<ButttonWInfo>(dataGridRow);
+                for (int j = 0; j < comboBoxes.Count; j++)
                 {
-                    examplers.Add(new ExamplerForComboBox(examplersbd[j]));
+                    comboBoxes[j].SomeId = compositions[i].Id;
                 }
-                comboBoxes[1].ItemsSource = examplers;
-                comboBoxes[1].DisplayMemberPath = "Id";
             }
 
 
@@ -254,17 +281,124 @@ namespace LibraryInterface
         }
 
 
-        private void ComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void ButtonInfo_Click2(object sender, RoutedEventArgs e)
         {
-            ComboBox comboBox = sender as ComboBox;
+            var button = sender as ButttonWInfo;
 
-            // Получение выбранного элемента
-            object selectedValue = comboBox.SelectedItem;
 
-            string text = ((ExamplerForComboBox)selectedValue).FullInfo;
-            MessageBox.Show(text);
+            MainWindow examplersWindow = new MainWindow();
+            examplersWindow.Show();
+            examplersWindow.menu.Visibility = Visibility.Collapsed;
+
+
+            examplersWindow.firstGrid.Visibility = Visibility.Hidden;
+            examplersWindow.firstGrid.ItemsSource = null;
+            examplersWindow.firstGrid.Columns.Clear();
+            if (strangeEvent == true)
+            {
+                examplersWindow.firstGrid.RowEditEnding -= FirstGrid_SourceUpdated;
+                strangeEvent = false;
+            }
+
+            UserInfo info = userInfo.Find(x => x.MenuInfo!.Title == "Произведения")!;
+            examplersWindow.Granting_Rights(info);
+
+            List<Author> authors = db.Authors.ToList();
+            List<ReaderFullName> readerFullNames = new List<ReaderFullName>();
+            for (int i = 0; i < authors.Count; i++)
+            {
+                readerFullNames.Add(new ReaderFullName(authors[i].FirstName,
+                    authors[i].LastName, authors[i].MiddleName)
+                { Id = authors[i].Id });
+            }
+            DataGridComboBoxColumn comboColumn3 = new DataGridComboBoxColumn();
+            comboColumn3.Header = "Автор";
+            comboColumn3.ItemsSource = readerFullNames;
+            comboColumn3.SelectedValueBinding = new Binding("AuthorId");
+            comboColumn3.SelectedValuePath = "Id";
+            comboColumn3.DisplayMemberPath = "FullName";
+            examplersWindow.firstGrid.Columns.Add(comboColumn3);
+
+
+            var examplers = db.AuthorsAndCompositions.Where(e => e.CompositionId == button!.SomeId).ToList();
+
+
+            examplersWindow.firstGrid.RowEditEnding += (sender, e) =>
+            {
+                var item = e.Row.Item as AuthorsAndCompositions;
+                item.CompositionId = button!.SomeId;
+                examplersWindow.db.AuthorsAndCompositions.Add(item);
+            };
+            examplersWindow.firstGrid.ItemsSource = examplers;
+
+
+            examplersWindow.firstGrid.Visibility = Visibility.Visible;
         }
 
+        private void ButtonInfo_Click(object sender, RoutedEventArgs e)
+        {
+            var button = sender as ButttonWInfo;
+
+
+            MainWindow examplersWindow = new MainWindow();
+            examplersWindow.Show();
+            examplersWindow.menu.Visibility = Visibility.Collapsed;
+
+
+            examplersWindow.firstGrid.Visibility = Visibility.Hidden;
+            examplersWindow.firstGrid.ItemsSource = null;
+            examplersWindow.firstGrid.Columns.Clear();
+            if (strangeEvent == true)
+            {
+                firstGrid.RowEditEnding -= FirstGrid_SourceUpdated;
+                strangeEvent = false;
+            }
+
+
+            UserInfo info = userInfo.Find(x => x.MenuInfo!.Title == "Произведения")!;
+            examplersWindow.Granting_Rights(info);
+
+
+            DataGridNumericColumn col5 = new DataGridNumericColumn();
+            col5.Header = "Инвентарный номер";
+            col5.Binding = new Binding("Id");
+            examplersWindow.firstGrid.Columns.Add(col5);
+
+
+            DataGridComboBoxColumn comboColumn2 = new DataGridComboBoxColumn();
+            comboColumn2.Header = "Хранилище";
+            comboColumn2.ItemsSource = db.Storages.ToList();
+            comboColumn2.SelectedValueBinding = new Binding("StorageId");
+            comboColumn2.SelectedValuePath = "Id";
+            comboColumn2.DisplayMemberPath = "Type";
+            examplersWindow.firstGrid.Columns.Add(comboColumn2);
+
+
+            DataGridNumericColumn col1 = new DataGridNumericColumn();
+            col1.Header = "Номер стеллажа";
+            col1.Binding = new Binding("NumberOfRack");
+            examplersWindow.firstGrid.Columns.Add(col1);
+
+            DataGridNumericColumn col2 = new DataGridNumericColumn();
+            col2.Header = "Номер полки";
+            col2.Binding = new Binding("NumberOfShelf");
+            examplersWindow.firstGrid.Columns.Add(col2);
+
+
+
+            var examplers = db.Examplers.Where(e => e.CompositionId == button!.SomeId).ToList();
+
+            examplersWindow.firstGrid.RowEditEnding += (sender, e) =>
+            {
+                var item = e.Row.Item as Exampler;
+                item.CompositionId = button!.SomeId;
+                examplersWindow.db.Add(e.Row.Item);
+            };
+            examplersWindow.firstGrid.ItemsSource = examplers;
+
+
+            examplersWindow.firstGrid.Visibility = Visibility.Visible;
+        }
 
         private List<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
         {
@@ -322,49 +456,9 @@ namespace LibraryInterface
             comboColumn3.DisplayMemberPath = "Name";
             firstGrid.Columns.Add(comboColumn3);
 
-            //DataGridComboBoxColumn comboColumn4 = new DataGridComboBoxColumn();
-            //comboColumn4.Header = "Издательство";
-            //comboColumn4.ItemsSource = db.PublishingHouses.ToList();
-            //comboColumn4.SelectedValueBinding = new Binding("PublishingHouseId");
-            //comboColumn4.SelectedValuePath = "Id";
-            //comboColumn4.DisplayMemberPath = "Name";
-            //firstGrid.Columns.Add(comboColumn4);
-
             firstGrid.ItemsSource = db.CompositionsAndPublishers.ToList();
             firstGrid.Visibility = Visibility.Visible;
         }
-
-        //private void PublishingHouse_Click(object sender, RoutedEventArgs e)
-        //{
-        //    firstGrid.Visibility = Visibility.Hidden;
-        //    firstGrid.ItemsSource = null;
-        //    firstGrid.Columns.Clear();
-        //    if (strangeEvent == true)
-        //    {
-        //        firstGrid.RowEditEnding -= FirstGrid_SourceUpdated;
-        //        strangeEvent = false;
-        //    }
-        //    UserInfo info = userInfo.Find(x => x.MenuInfoId == (sender as MyMenuItem)!.Id)!;
-        //    Granting_Rights(info);
-
-        //    DataGridTextColumn col1 = new DataGridTextColumn();
-        //    col1.Header = "Название";
-        //    col1.Binding = new Binding("Name");
-        //    firstGrid.Columns.Add(col1);
-
-        //    DataGridNumericColumn col2 = new DataGridNumericColumn();
-        //    col2.Header = "Дней выдачи";
-        //    col2.Binding = new Binding("DaysOfIssuance");
-        //    firstGrid.Columns.Add(col2);
-
-        //    DataGridCheckBoxColumn checkboxColumn1 = new DataGridCheckBoxColumn();
-        //    checkboxColumn1.Header = "Разрешение";
-        //    checkboxColumn1.Binding = new Binding("PermissionOnIssuance") { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged };
-        //    firstGrid.Columns.Add(checkboxColumn1);
-
-        //    firstGrid.ItemsSource = db.PublishingHouses.ToList();
-        //    firstGrid.Visibility = Visibility.Visible;
-        //}
         private void Exampler_Click(object sender, RoutedEventArgs e)
         {
             firstGrid.Visibility = Visibility.Hidden;
@@ -411,70 +505,7 @@ namespace LibraryInterface
             firstGrid.ItemsSource = db.Examplers.ToList();
             firstGrid.Visibility = Visibility.Visible;
         }
-        private void GivenExamplers_Click(object sender, RoutedEventArgs e)
-        {
-            firstGrid.Visibility = Visibility.Hidden;
-            firstGrid.ItemsSource = null;
-            firstGrid.Columns.Clear();
-            if (strangeEvent == true)
-            {
-                firstGrid.RowEditEnding -= FirstGrid_SourceUpdated;
-                strangeEvent = false;
-            }
-            UserInfo info = userInfo.Find(x => x.MenuInfoId == (sender as MyMenuItem)!.Id)!;
-            Granting_Rights(info);
-
-            List<Reader> readers = db.Readers.ToList();
-            List<ReaderFullName> readerFullNames = new List<ReaderFullName>();
-            for (int i = 0; i < readers.Count; i++)
-            {
-                readerFullNames.Add(new ReaderFullName(readers[i].FirstName,
-                    readers[i].LastName, readers[i].MiddleName)
-                { Id = readers[i].Id });
-            }
-            DataGridComboBoxColumn comboColumn2 = new DataGridComboBoxColumn();
-            comboColumn2.Header = "Читатель";
-            comboColumn2.ItemsSource = readerFullNames;
-            comboColumn2.SelectedValueBinding = new Binding("ReaderId");
-            comboColumn2.SelectedValuePath = "Id";
-            comboColumn2.DisplayMemberPath = "FullName";
-            firstGrid.Columns.Add(comboColumn2);
-
-            DataGridNumericColumn col2 = new DataGridNumericColumn();
-            col2.Header = "Инвентарный номер";
-            col2.Binding = new Binding("ExamplerId");
-            firstGrid.Columns.Add(col2);
-
-            DataGridTemplateColumn templateColumn = new DataGridTemplateColumn();
-            DataTemplate dataTemplate = new DataTemplate();
-            FrameworkElementFactory datePicker = new FrameworkElementFactory(typeof(DatePicker));
-            datePicker.SetBinding(DatePicker.SelectedDateProperty, new Binding("DateOfIssue") { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged });
-            datePicker.AddHandler(DatePicker.SelectedDateChangedEvent, new EventHandler<SelectionChangedEventArgs>(DataGridChanged!));
-
-            dataTemplate.VisualTree = datePicker;
-            templateColumn.Header = "День взятия";
-            templateColumn.CellTemplate = dataTemplate;
-            firstGrid.Columns.Add(templateColumn);
-
-            DataGridTemplateColumn templateColumn2 = new DataGridTemplateColumn();
-            DataTemplate dataTemplate2 = new DataTemplate();
-            FrameworkElementFactory datePicker2 = new FrameworkElementFactory(typeof(DatePicker));
-            datePicker2.SetBinding(DatePicker.SelectedDateProperty, new Binding("DateOfReturn") { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged });
-            datePicker2.AddHandler(DatePicker.SelectedDateChangedEvent, new EventHandler<SelectionChangedEventArgs>(DataGridChanged!));
-
-            dataTemplate2.VisualTree = datePicker2;
-            templateColumn2.Header = "День возврата";
-            templateColumn2.CellTemplate = dataTemplate2;
-            firstGrid.Columns.Add(templateColumn2);
-
-            DataGridCheckBoxColumn checkboxColumn1 = new DataGridCheckBoxColumn();
-            checkboxColumn1.Header = "Вернули?";
-            checkboxColumn1.Binding = new Binding("Returned") { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged };
-            firstGrid.Columns.Add(checkboxColumn1);
-
-            firstGrid.ItemsSource = db.GivenExamplers.ToList();
-            firstGrid.Visibility = Visibility.Visible;
-        }
+       
 
         private void InterlibrarySubscription_Click(object sender, RoutedEventArgs e)
         {
@@ -602,7 +633,8 @@ namespace LibraryInterface
             firstGrid.ItemsSource = db.PlacesOfPublications.ToList();
             firstGrid.Visibility = Visibility.Visible;
         }
-        private void Student_Click(object sender, RoutedEventArgs e)
+
+        private void Reader_Click(object sender, RoutedEventArgs e)
         {
             firstGrid.Visibility = Visibility.Hidden;
             firstGrid.ItemsSource = null;
@@ -632,24 +664,10 @@ namespace LibraryInterface
             col3.Binding = new Binding("MiddleName");
             firstGrid.Columns.Add(col3);
 
-            DataGridComboBoxColumn comboColumn2 = new DataGridComboBoxColumn();
-            comboColumn2.Header = "Факультет";
-            comboColumn2.ItemsSource = db.Faculties.ToList();
-            comboColumn2.SelectedValueBinding = new Binding("FacultyId");
-            comboColumn2.SelectedValuePath = "Id";
-            comboColumn2.DisplayMemberPath = "Name";
-            firstGrid.Columns.Add(comboColumn2);
-
-            DataGridTextColumn col4 = new DataGridTextColumn();
-            col4.Header = "Группа";
-            col4.Binding = new Binding("Group");
-            firstGrid.Columns.Add(col4);
-
             DataGridTextColumn col5 = new DataGridTextColumn();
             col5.Header = "Читательский билет";
             col5.Binding = new Binding("ReaderTicket");
             firstGrid.Columns.Add(col5);
-
 
             DataGridTemplateColumn templateColumn = new DataGridTemplateColumn();
             DataTemplate dataTemplate = new DataTemplate();
@@ -671,46 +689,28 @@ namespace LibraryInterface
             templateColumn2.CellTemplate = dataTemplate2;
             firstGrid.Columns.Add(templateColumn2);
 
-            firstGrid.ItemsSource = db.Students.ToList();
-            firstGrid.Visibility = Visibility.Visible;
-        }
-        private void Professor_Click(object sender, RoutedEventArgs e)
-        {
-            firstGrid.Visibility = Visibility.Hidden;
-            firstGrid.ItemsSource = null;
-            firstGrid.Columns.Clear();
-            if (strangeEvent == true)
-            {
-                firstGrid.RowEditEnding -= FirstGrid_SourceUpdated;
-                strangeEvent = false;
-            }
-            UserInfo info = userInfo.Find(x => x.MenuInfoId == (sender as MyMenuItem)!.Id)!;
-            Granting_Rights(info);
-
-            DataGridTextColumn col1 = new DataGridTextColumn();
-            col1.Header = "Фамилия";
-            col1.Binding = new Binding("LastName");
-            firstGrid.Columns.Add(col1);
-
-
-            DataGridTextColumn col2 = new DataGridTextColumn();
-            col2.Header = "Имя";
-            col2.Binding = new Binding("FirstName");
-            firstGrid.Columns.Add(col2);
-
-
-            DataGridTextColumn col3 = new DataGridTextColumn();
-            col3.Header = "Отчество";
-            col3.Binding = new Binding("MiddleName");
-            firstGrid.Columns.Add(col3);
 
             DataGridComboBoxColumn comboColumn2 = new DataGridComboBoxColumn();
-            comboColumn2.Header = "Степень";
-            comboColumn2.ItemsSource = db.Degrees.ToList();
-            comboColumn2.SelectedValueBinding = new Binding("DegreeId");
+            comboColumn2.Header = "Факультет";
+            comboColumn2.ItemsSource = db.Faculties.ToList();
+            comboColumn2.SelectedValueBinding = new Binding("FacultyId");
             comboColumn2.SelectedValuePath = "Id";
             comboColumn2.DisplayMemberPath = "Name";
             firstGrid.Columns.Add(comboColumn2);
+
+            DataGridTextColumn col4 = new DataGridTextColumn();
+            col4.Header = "Группа";
+            col4.Binding = new Binding("Group");
+            firstGrid.Columns.Add(col4);
+
+
+            DataGridComboBoxColumn comboColumn6 = new DataGridComboBoxColumn();
+            comboColumn6.Header = "Степень";
+            comboColumn6.ItemsSource = db.Degrees.ToList();
+            comboColumn6.SelectedValueBinding = new Binding("DegreeId");
+            comboColumn6.SelectedValuePath = "Id";
+            comboColumn6.DisplayMemberPath = "Name";
+            firstGrid.Columns.Add(comboColumn6);
 
             DataGridComboBoxColumn comboColumn3 = new DataGridComboBoxColumn();
             comboColumn3.Header = "Звание";
@@ -738,173 +738,194 @@ namespace LibraryInterface
             comboColumn5.DisplayMemberPath = "Name";
             firstGrid.Columns.Add(comboColumn5);
 
-            DataGridTextColumn col5 = new DataGridTextColumn();
-            col5.Header = "Читательский билет";
-            col5.Binding = new Binding("ReaderTicket");
-            firstGrid.Columns.Add(col5);
-
-            DataGridTemplateColumn templateColumn = new DataGridTemplateColumn();
-            DataTemplate dataTemplate = new DataTemplate();
-            FrameworkElementFactory datePicker = new FrameworkElementFactory(typeof(DatePicker));
-            datePicker.SetBinding(DatePicker.SelectedDateProperty, new Binding("RegistrationDate") { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged });
-            datePicker.AddHandler(DatePicker.SelectedDateChangedEvent, new EventHandler<SelectionChangedEventArgs>(DataGridChanged!));
-            dataTemplate.VisualTree = datePicker;
-            templateColumn.Header = "Дата регистраци";
-            templateColumn.CellTemplate = dataTemplate;
-            firstGrid.Columns.Add(templateColumn);
-
-            DataGridTemplateColumn templateColumn2 = new DataGridTemplateColumn();
-            DataTemplate dataTemplate2 = new DataTemplate();
-            FrameworkElementFactory datePicker2 = new FrameworkElementFactory(typeof(DatePicker));
-            datePicker2.SetBinding(DatePicker.SelectedDateProperty, new Binding("PereregistrationDate") { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged });
-            datePicker2.AddHandler(DatePicker.SelectedDateChangedEvent, new EventHandler<SelectionChangedEventArgs>(DataGridChanged!));
-            dataTemplate2.VisualTree = datePicker2;
-            templateColumn2.Header = "День перерегистрации";
-            templateColumn2.CellTemplate = dataTemplate2;
-            firstGrid.Columns.Add(templateColumn2);
-
-            firstGrid.ItemsSource = db.Professors.ToList();
-            firstGrid.Visibility = Visibility.Visible;
-        }
-        private void Employee_Click(object sender, RoutedEventArgs e)
-        {
-            firstGrid.Visibility = Visibility.Hidden;
-            firstGrid.ItemsSource = null;
-            firstGrid.Columns.Clear();
-            if (strangeEvent == true)
-            {
-                firstGrid.RowEditEnding -= FirstGrid_SourceUpdated;
-                strangeEvent = false;
-            }
-            UserInfo info = userInfo.Find(x => x.MenuInfoId == (sender as MyMenuItem)!.Id)!;
-            Granting_Rights(info);
 
 
-            DataGridTextColumn col1 = new DataGridTextColumn();
-            col1.Header = "Фамилия";
-            col1.Binding = new Binding("LastName");
-            firstGrid.Columns.Add(col1);
+            var comboBoxColumn = new DataGridTemplateColumn();
+            comboBoxColumn.Header = "Выданные экземпляры";
+            FrameworkElementFactory comboBoxFactory = new FrameworkElementFactory(typeof(ButttonWInfo));
+            comboBoxFactory.AddHandler(ButttonWInfo.ClickEvent, new RoutedEventHandler(ButtonInfo_Click3));
+            comboBoxFactory.SetValue(ButttonWInfo.ContentProperty, "Открыть");
+            DataTemplate cellTemplate = new DataTemplate();
+            cellTemplate.VisualTree = comboBoxFactory;
+            comboBoxColumn.CellTemplate = cellTemplate;
+            firstGrid.Columns.Add(comboBoxColumn);
+
+            var buttonColumn = new DataGridTemplateColumn();
+            buttonColumn.Header = "Штрафы";
+            FrameworkElementFactory buttonFactory = new FrameworkElementFactory(typeof(ButttonWInfo));
+            buttonFactory.AddHandler(ButttonWInfo.ClickEvent, new RoutedEventHandler(ButtonInfo_Click4));
+            buttonFactory.SetValue(ButttonWInfo.ContentProperty, "Открыть");
+            DataTemplate cellTemplate2 = new DataTemplate();
+            cellTemplate2.VisualTree = buttonFactory;
+            buttonColumn.CellTemplate = cellTemplate2;
+            firstGrid.Columns.Add(buttonColumn);
+
+            var readers = db.Readers.ToList();
+            firstGrid.ItemsSource = readers;
 
 
-            DataGridTextColumn col2 = new DataGridTextColumn();
-            col2.Header = "Имя";
-            col2.Binding = new Binding("FirstName");
-            firstGrid.Columns.Add(col2);
-
-
-            DataGridTextColumn col3 = new DataGridTextColumn();
-            col3.Header = "Отчество";
-            col3.Binding = new Binding("MiddleName");
-            firstGrid.Columns.Add(col3);
-
-            DataGridComboBoxColumn comboColumn4 = new DataGridComboBoxColumn();
-            comboColumn4.Header = "Кафедра";
-            comboColumn4.ItemsSource = db.Departments.ToList();
-            comboColumn4.SelectedValueBinding = new Binding("DepartmentId");
-            comboColumn4.SelectedValuePath = "Id";
-            comboColumn4.DisplayMemberPath = "Name";
-            firstGrid.Columns.Add(comboColumn4);
-
-
-            DataGridComboBoxColumn comboColumn5 = new DataGridComboBoxColumn();
-            comboColumn5.Header = "Должность";
-            comboColumn5.ItemsSource = db.Positions.ToList();
-            comboColumn5.SelectedValueBinding = new Binding("PositionId");
-            comboColumn5.SelectedValuePath = "Id";
-            comboColumn5.DisplayMemberPath = "Name";
-            firstGrid.Columns.Add(comboColumn5);
-
-            DataGridTextColumn col5 = new DataGridTextColumn();
-            col5.Header = "Читательский билет";
-            col5.Binding = new Binding("ReaderTicket");
-            firstGrid.Columns.Add(col5);
-
-            DataGridTemplateColumn templateColumn = new DataGridTemplateColumn();
-            DataTemplate dataTemplate = new DataTemplate();
-            FrameworkElementFactory datePicker = new FrameworkElementFactory(typeof(DatePicker));
-            datePicker.SetBinding(DatePicker.SelectedDateProperty, new Binding("RegistrationDate") { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged });
-            datePicker.AddHandler(DatePicker.SelectedDateChangedEvent, new EventHandler<SelectionChangedEventArgs>(DataGridChanged!));
-            dataTemplate.VisualTree = datePicker;
-            templateColumn.Header = "Дата регистраци";
-            templateColumn.CellTemplate = dataTemplate;
-            firstGrid.Columns.Add(templateColumn);
-
-            DataGridTemplateColumn templateColumn2 = new DataGridTemplateColumn();
-            DataTemplate dataTemplate2 = new DataTemplate();
-            FrameworkElementFactory datePicker2 = new FrameworkElementFactory(typeof(DatePicker));
-            datePicker2.SetBinding(DatePicker.SelectedDateProperty, new Binding("PereregistrationDate") { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged });
-            datePicker2.AddHandler(DatePicker.SelectedDateChangedEvent, new EventHandler<SelectionChangedEventArgs>(DataGridChanged!));
-            dataTemplate2.VisualTree = datePicker2;
-            templateColumn2.Header = "День перерегистрации";
-            templateColumn2.CellTemplate = dataTemplate2;
-            firstGrid.Columns.Add(templateColumn2);
-
-            firstGrid.ItemsSource = db.Employees.ToList();
-            firstGrid.Visibility = Visibility.Visible;
-        }
-        private void ReadersAndPenaltys_Click(object sender, RoutedEventArgs e)
-        {
-            firstGrid.Visibility = Visibility.Hidden;
-            firstGrid.ItemsSource = null;
-            firstGrid.Columns.Clear();
-            if (strangeEvent == true)
-            {
-                firstGrid.RowEditEnding -= FirstGrid_SourceUpdated;
-                strangeEvent = false;
-            }
-            UserInfo info = userInfo.Find(x => x.MenuInfoId == (sender as MyMenuItem)!.Id)!;
-            Granting_Rights(info);
-
-            List<Reader> readers = db.Readers.ToList();
-            List<ReaderFullName> readerFullNames = new List<ReaderFullName>();
             for (int i = 0; i < readers.Count; i++)
             {
-                readerFullNames.Add(new ReaderFullName(readers[i].FirstName,
-                    readers[i].LastName, readers[i].MiddleName)
-                { Id = readers[i].Id });
+                firstGrid.UpdateLayout();
+                firstGrid.ScrollIntoView(firstGrid.Items[i]);
+                DataGridRow dataGridRow = (DataGridRow)firstGrid.ItemContainerGenerator.ContainerFromIndex(i);
+                List<ButttonWInfo> comboBoxes = FindVisualChildren<ButttonWInfo>(dataGridRow);
+                for (int j = 0; j < comboBoxes.Count; j++)
+                {
+                    comboBoxes[j].SomeId = readers[i].Id;
+                }
             }
-            DataGridComboBoxColumn comboColumn2 = new DataGridComboBoxColumn();
-            comboColumn2.Header = "Читатель";
-            comboColumn2.ItemsSource = readerFullNames;
-            comboColumn2.SelectedValueBinding = new Binding("ReaderId");
-            comboColumn2.SelectedValuePath = "Id";
-            comboColumn2.DisplayMemberPath = "FullName";
-            firstGrid.Columns.Add(comboColumn2);
+
+            firstGrid.Visibility = Visibility.Visible;
+
+        }
+
+        private void ButtonInfo_Click3(object sender, RoutedEventArgs e)
+        {
+            var button = sender as ButttonWInfo;
+
+
+            MainWindow examplersWindow = new MainWindow();
+            examplersWindow.Show();
+            examplersWindow.menu.Visibility = Visibility.Collapsed;
+
+
+            examplersWindow.firstGrid.Visibility = Visibility.Hidden;
+            examplersWindow.firstGrid.ItemsSource = null;
+            examplersWindow.firstGrid.Columns.Clear();
+            if (strangeEvent == true)
+            {
+                examplersWindow.firstGrid.RowEditEnding -= FirstGrid_SourceUpdated;
+                strangeEvent = false;
+            }
+
+            UserInfo info = userInfo.Find(x => x.MenuInfo!.Title == "Читатели")!;
+            examplersWindow.Granting_Rights(info);
+
+
+            DataGridNumericColumn col2 = new DataGridNumericColumn();
+            col2.Header = "Инвентарный номер";
+            col2.Binding = new Binding("ExamplerId") { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged };
+            examplersWindow.firstGrid.Columns.Add(col2);
+
+            DataGridTemplateColumn templateColumn = new DataGridTemplateColumn();
+            DataTemplate dataTemplate = new DataTemplate();
+            FrameworkElementFactory datePicker = new FrameworkElementFactory(typeof(DatePicker));
+            datePicker.SetBinding(DatePicker.SelectedDateProperty, new Binding("DateOfIssue") { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged });
+            datePicker.AddHandler(DatePicker.SelectedDateChangedEvent, new EventHandler<SelectionChangedEventArgs>(examplersWindow.DataGridChanged!));
+
+            dataTemplate.VisualTree = datePicker;
+            templateColumn.Header = "День взятия";
+            templateColumn.CellTemplate = dataTemplate;
+            examplersWindow.firstGrid.Columns.Add(templateColumn);
+
+            DataGridTemplateColumn templateColumn2 = new DataGridTemplateColumn();
+            DataTemplate dataTemplate2 = new DataTemplate();
+            FrameworkElementFactory datePicker2 = new FrameworkElementFactory(typeof(DatePicker));
+            datePicker2.SetBinding(DatePicker.SelectedDateProperty, new Binding("DateOfReturn") { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged });
+            datePicker2.AddHandler(DatePicker.SelectedDateChangedEvent, new EventHandler<SelectionChangedEventArgs>(examplersWindow.DataGridChanged!));
+
+            dataTemplate2.VisualTree = datePicker2;
+            templateColumn2.Header = "День возврата";
+            templateColumn2.CellTemplate = dataTemplate2;
+            examplersWindow.firstGrid.Columns.Add(templateColumn2);
+
+            DataGridCheckBoxColumn checkboxColumn1 = new DataGridCheckBoxColumn();
+            checkboxColumn1.Header = "Вернули?";
+            checkboxColumn1.Binding = new Binding("Returned") { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged };
+            examplersWindow.firstGrid.Columns.Add(checkboxColumn1);
+
+
+
+            var examplers = db.GivenExamplers.Where(e => e.ReaderId == button!.SomeId).ToList();
+
+
+            examplersWindow.firstGrid.RowEditEnding += (sender, e) =>
+            {
+                var item = e.Row.Item as GivenExamplers;
+                item.ReaderId = button!.SomeId;
+                examplersWindow.db.GivenExamplers.Add(item);
+
+                
+            };
+            examplersWindow.firstGrid.ItemsSource = examplers;
+
+
+            examplersWindow.firstGrid.Visibility = Visibility.Visible;
+        }
+
+        private void ButtonInfo_Click4(object sender, RoutedEventArgs e)
+        {
+            var button = sender as ButttonWInfo;
+
+
+            MainWindow examplersWindow = new MainWindow();
+            examplersWindow.Show();
+            examplersWindow.menu.Visibility = Visibility.Collapsed;
+
+
+            examplersWindow.firstGrid.Visibility = Visibility.Hidden;
+            examplersWindow.firstGrid.ItemsSource = null;
+            examplersWindow.firstGrid.Columns.Clear();
+            if (strangeEvent == true)
+            {
+                firstGrid.RowEditEnding -= FirstGrid_SourceUpdated;
+                strangeEvent = false;
+            }
+
+
+            UserInfo info = userInfo.Find(x => x.MenuInfo!.Title == "Читатели")!;
+            examplersWindow.Granting_Rights(info);
 
 
             DataGridComboBoxColumn comboColumn5 = new DataGridComboBoxColumn();
             comboColumn5.Header = "Штраф";
             comboColumn5.ItemsSource = db.Penalties.ToList();
-            comboColumn5.SelectedValueBinding = new Binding("PenaltyId");
+            comboColumn5.SelectedValueBinding = new Binding("PenaltyId") { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged };
             comboColumn5.SelectedValuePath = "Id";
             comboColumn5.DisplayMemberPath = "Name";
-            firstGrid.Columns.Add(comboColumn5);
+            examplersWindow.firstGrid.Columns.Add(comboColumn5);
 
 
             DataGridTemplateColumn templateColumn = new DataGridTemplateColumn();
             DataTemplate dataTemplate = new DataTemplate();
             FrameworkElementFactory datePicker = new FrameworkElementFactory(typeof(DatePicker));
             datePicker.SetBinding(DatePicker.SelectedDateProperty, new Binding("DateOfGetting") { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged });
-            datePicker.AddHandler(DatePicker.SelectedDateChangedEvent, new EventHandler<SelectionChangedEventArgs>(DataGridChanged!));
+            datePicker.AddHandler(DatePicker.SelectedDateChangedEvent, new EventHandler<SelectionChangedEventArgs>(examplersWindow.DataGridChanged!));
             dataTemplate.VisualTree = datePicker;
             templateColumn.Header = "Дата получения";
             templateColumn.CellTemplate = dataTemplate;
-            firstGrid.Columns.Add(templateColumn);
+            examplersWindow.firstGrid.Columns.Add(templateColumn);
 
             DataGridTemplateColumn templateColumn2 = new DataGridTemplateColumn();
             DataTemplate dataTemplate2 = new DataTemplate();
             FrameworkElementFactory datePicker2 = new FrameworkElementFactory(typeof(DatePicker));
             datePicker2.SetBinding(DatePicker.SelectedDateProperty, new Binding("DateOfEnding") { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged });
-            datePicker2.AddHandler(DatePicker.SelectedDateChangedEvent, new EventHandler<SelectionChangedEventArgs>(DataGridChanged!));
+            datePicker2.AddHandler(DatePicker.SelectedDateChangedEvent, new EventHandler<SelectionChangedEventArgs>(examplersWindow.DataGridChanged!));
             dataTemplate2.VisualTree = datePicker2;
             templateColumn2.Header = "День окончания";
             templateColumn2.CellTemplate = dataTemplate2;
-            firstGrid.Columns.Add(templateColumn2);
+            examplersWindow.firstGrid.Columns.Add(templateColumn2);
 
 
-            firstGrid.ItemsSource = db.ReadersAndPenaltys.ToList();
-            firstGrid.Visibility = Visibility.Visible;
+            
+
+            examplersWindow.firstGrid.RowEditEnding += (sender, e) =>
+            {
+                var item = e.Row.Item as ReadersAndPenaltys;
+                item.ReaderId = button!.SomeId;
+                examplersWindow.db.ReadersAndPenaltys.Add(item);
+
+                var test = db.ReadersAndPenaltys.ToList();
+            };
+
+            var examplers = db.ReadersAndPenaltys.Where(e => e.ReaderId == button!.SomeId).ToList();
+            examplersWindow.firstGrid.ItemsSource = examplers;
+
+
+            examplersWindow.firstGrid.Visibility = Visibility.Visible;
         }
+
         private void Storage_Click(object sender, RoutedEventArgs e)
         {
             firstGrid.Visibility = Visibility.Hidden;

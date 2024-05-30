@@ -33,15 +33,19 @@ namespace LibraryInterface
             
             string login = tbLogin.Text;
             string password = tbPassword.Password;
+            var window = new MainWindow();
+               // Application.Current.MainWindow;
 
             try
             {
-                var window = Application.Current.MainWindow;
+                
                 Library.Entities.User user = (window as MainWindow)!.DbForUser.Users.Where((u) => u.Name == login && u.Password == password).Single();
-                (window as MainWindow)!.userInfo = (window as MainWindow)!.DbForUser.UserInfo.Where(u => user.Id == u.UserId).ToList();
-                MessageBox.Show("Успешно!", $"Привет, {user.Name}!");
+                (window as MainWindow)!.userInfo = (window as MainWindow)!.DbForUser.UserInfo.Where(u => user.Id == u.UserId).Include(e => e.MenuInfo).ToList();
+                //MessageBox.Show("Успешно!", $"Привет, {user.Name}!");
 
                 isLogin = true;
+                Application.Current.MainWindow = window;
+                window.Show();
                 this.Close();
             }
             catch
