@@ -28,6 +28,28 @@ namespace LibraryInterface
             
         }
 
+        private void Window_Activated(object sender, EventArgs e)
+        {
+            SetCapsLockOnState();
+        }
+
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            SetCapsLockOnState();
+        }
+
+        private void SetCapsLockOnState()
+        {
+            if (Console.CapsLock)
+            {
+                Caps.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                Caps.Visibility = Visibility.Hidden;
+            }
+        }
+
         private void LoginButton_Click(object sender, RoutedEventArgs e)
         {
             
@@ -41,7 +63,6 @@ namespace LibraryInterface
                 
                 Library.Entities.User user = (window as MainWindow)!.DbForUser.Users.Where((u) => u.Name == login && u.Password == password).Single();
                 (window as MainWindow)!.userInfo = (window as MainWindow)!.DbForUser.UserInfo.Where(u => user.Id == u.UserId).Include(e => e.MenuInfo).ToList();
-                //MessageBox.Show("Успешно!", $"Привет, {user.Name}!");
 
                 isLogin = true;
                 Application.Current.MainWindow = window;
